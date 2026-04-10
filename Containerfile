@@ -4,7 +4,7 @@
 #
 # Build examples:
 #   podman build -t opencode:latest -f Containerfile .
-#   podman build --build-arg BUN_VERSION=1.3.11 -f Containerfile .
+#   podman build --build-arg BUN_VERSION=1.3.11 --build-arg NODE_GYP_VERSION=11.2.0 -f Containerfile .
 
 ARG UBI_IMAGE="registry.access.redhat.com/ubi9/ubi"
 ARG UBI_MINIMAL_IMAGE="registry.access.redhat.com/ubi9/ubi-minimal"
@@ -14,6 +14,7 @@ FROM ${UBI_IMAGE} AS builder
 
 ARG BUN_VERSION=1.3.11
 ARG NODE_VERSION=22.16.0
+ARG NODE_GYP_VERSION=11.2.0
 ARG RIPGREP_VERSION=14.1.1
 
 ARG NODE_SHA256_X64=f4cb75bb036f0d0eddf6b79d9596df1aaab9ddccd6a20bf489be5abe9467e84e
@@ -26,7 +27,8 @@ ARG RIPGREP_SHA256_ARM64=c827481c4ff4ea10c9dc7a4022c8de5db34a5737cb74484d62eb94a
 USER 0
 
 ENV BUN_INSTALL=/opt/app-root/.bun
-ENV PATH=/opt/app-root/.bun/bin:${PATH}
+ENV NPM_CONFIG_PREFIX=/opt/app-root/.npm-global
+ENV PATH=/opt/app-root/.npm-global/bin:/opt/app-root/.bun/bin:${PATH}
 
 RUN dnf install -y --nodocs --disablerepo='*' --enablerepo='ubi-*' \
       gcc g++ git make pkg-config python3 unzip xz && \
@@ -43,8 +45,7 @@ RUN set -eux; \
       "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz"; \
     echo "${node_sha256}  /tmp/node.tar.xz" | sha256sum -c -; \
     tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1; \
-    rm /tmp/node.tar.xz; \
-    npm install -g node-gyp
+    rm /tmp/node.tar.xz
 
 RUN set -eux; \
     arch=$(uname -m); \
@@ -79,8 +80,8 @@ RUN set -eux; \
 
 WORKDIR /build
 
-RUN mkdir -p /build /opt/app-root/.bun/install/cache && \
-    chown -R 1001:0 /build /opt/app-root/.bun
+RUN mkdir -p /build /opt/app-root/.bun/install/cache /opt/app-root/.npm-global && \
+    chown -R 1001:0 /build /opt/app-root/.bun /opt/app-root/.npm-global
 
 COPY --chown=1001:0 bun.lock bunfig.toml package.json turbo.json ./
 COPY --chown=1001:0 patches/ patches/
@@ -90,6 +91,8 @@ USER 1001
 
 ENV HOME=/build
 ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
+
+RUN npm install -g --no-audit --no-fund "node-gyp@${NODE_GYP_VERSION}"
 
 RUN --mount=type=cache,id=opencode-bun-cache,target=/opt/app-root/.bun/install/cache,uid=1001,gid=0,sharing=locked \
     bun install --frozen-lockfile
@@ -155,8 +158,8 @@ COPY --from=builder --chown=1001:0 \
      /build/packages/opencode/dist/opencode-linux-*/bin/opencode \
      /opt/app-root/bin/opencode
 
-RUN opencode --version
-
 USER 1001
+
+RUN opencode --version
 
 ENTRYPOINT ["opencode"]
