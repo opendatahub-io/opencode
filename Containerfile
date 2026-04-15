@@ -126,8 +126,8 @@ RUN microdnf update -y && \
       openssh-clients \
       patch \
       procps-ng \
-      python3 \
-      python3-pip \
+      python3.12 \
+      python3.12-pip \
       shadow-utils \
       tar \
       vim-minimal \
@@ -144,7 +144,7 @@ RUN useradd -u 1001 -g 0 -d /home/opencode -m opencode && \
     chmod -R g=u /home/opencode /opt/app-root
 
 ARG UV_VERSION=0.11.6
-RUN python3 -m venv /opt/app-root/venv && \
+RUN python3.12 -m venv /opt/app-root/venv && \
     /opt/app-root/venv/bin/pip install --no-cache-dir "uv==${UV_VERSION}" && \
     chown -R 1001:0 /opt/app-root/venv
 
