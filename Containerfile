@@ -102,7 +102,8 @@ COPY --chown=1001:0 . .
 ARG OPENCODE_CHANNEL=latest
 ENV OPENCODE_CHANNEL=${OPENCODE_CHANNEL}
 
-RUN cd packages/opencode && bun run script/build.ts --single
+RUN export OPENCODE_VERSION=$(node -p 'require("./packages/opencode/package.json").version') && \
+    cd packages/opencode && bun run script/build.ts --single
 
 # ── Stage 2: Runtime (UBI 9 minimal) ─────────────────────────
 FROM ${UBI_MINIMAL_IMAGE}
