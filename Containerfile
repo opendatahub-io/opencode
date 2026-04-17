@@ -136,7 +136,7 @@ RUN microdnf update -y && \
     microdnf clean all
 
 RUN useradd -u 1001 -g 0 -d /home/opencode -m opencode && \
-    mkdir -p /opt/app-root/bin /opt/app-root/venv \
+    mkdir -p /opt/app-root/bin /opt/app-root/venv /opt/app-root/workspace \
              /home/opencode/.opencode \
              /home/opencode/.cache/opencode/bin \
              /home/opencode/.config/opencode \
@@ -160,6 +160,7 @@ COPY --from=builder --chown=1001:0 \
      /opt/app-root/bin/opencode
 
 USER 1001
+WORKDIR /opt/app-root/workspace
 
 RUN opencode --version
 
