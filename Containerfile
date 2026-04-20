@@ -102,7 +102,10 @@ COPY --chown=1001:0 . .
 ARG OPENCODE_CHANNEL=latest
 ENV OPENCODE_CHANNEL=${OPENCODE_CHANNEL}
 
-RUN export OPENCODE_VERSION=$(node -p 'require("./packages/opencode/package.json").version') && \
+RUN set -eux; \
+    OPENCODE_VERSION=$(node -p 'require("./packages/opencode/package.json").version'); \
+    test -n "$OPENCODE_VERSION"; \
+    export OPENCODE_VERSION; \
     cd packages/opencode && bun run script/build.ts --single
 
 # ── Stage 2: Runtime (UBI 9 minimal) ─────────────────────────
@@ -133,7 +136,8 @@ RUN microdnf update -y && \
       tar \
       vim-minimal \
       which && \
-    microdnf clean all
+    microdnf clean all && \
+    ln -sf /usr/bin/python3.12 /usr/bin/python3
 
 RUN useradd -u 1001 -g 0 -d /home/opencode -m opencode && \
     mkdir -p /opt/app-root/bin /opt/app-root/venv /opt/app-root/workspace \
