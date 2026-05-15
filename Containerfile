@@ -4,7 +4,7 @@
 #
 # Build examples:
 #   podman build -t opencode:latest -f Containerfile .
-#   podman build --build-arg BUN_VERSION=1.3.11 --build-arg NODE_GYP_VERSION=11.2.0 -f Containerfile .
+#   podman build --build-arg BUN_VERSION=1.3.13 --build-arg NODE_GYP_VERSION=11.2.0 -f Containerfile .
 
 ARG UBI_IMAGE="registry.access.redhat.com/ubi9/ubi"
 ARG UBI_MINIMAL_IMAGE="registry.access.redhat.com/ubi9/ubi-minimal"
@@ -12,15 +12,15 @@ ARG UBI_MINIMAL_IMAGE="registry.access.redhat.com/ubi9/ubi-minimal"
 # ── Stage 1: Build ────────────────────────────────────────────
 FROM ${UBI_IMAGE} AS builder
 
-ARG BUN_VERSION=1.3.11
+ARG BUN_VERSION=1.3.13
 ARG NODE_VERSION=22.16.0
 ARG NODE_GYP_VERSION=11.2.0
 ARG RIPGREP_VERSION=14.1.1
 
 ARG NODE_SHA256_X64=f4cb75bb036f0d0eddf6b79d9596df1aaab9ddccd6a20bf489be5abe9467e84e
 ARG NODE_SHA256_ARM64=eab80cb88f8fda1e65f5e8d0420c9809bdb320b03fd34976ab7161b6e703b910
-ARG BUN_SHA256_X64=8611ba935af886f05a6f38740a15160326c15e5d5d07adef966130b4493607ed
-ARG BUN_SHA256_ARM64=d13944da12a53ecc74bf6a720bd1d04c4555c038dfe422365356a7be47691fdf
+ARG BUN_SHA256_X64=79c0771fa8b92c33aae41e15a0e0d307ea99d0e2f00317c71c6c53237a78e25a
+ARG BUN_SHA256_ARM64=70bae41b3908b0a120e1e58c5c8af30e74afae3b8d11b0d3fdd8e787ddfb4b22
 ARG RIPGREP_SHA256_X64=4cf9f2741e6c465ffdb7c26f38056a59e2a2544b51f7cc128ef28337eeae4d8e
 ARG RIPGREP_SHA256_ARM64=c827481c4ff4ea10c9dc7a4022c8de5db34a5737cb74484d62eb94a95841ab2f
 
