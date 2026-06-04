@@ -1,0 +1,109 @@
+name: Build and Push OpenShift Image
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - Containerfile
+      - .github/workflows/build-openshift-image.yml
+  pull_request:
+    paths:
+      - Containerfile
+      - .github/workflows/build-openshift-image.yml
+  workflow_dispatch:
+
+env:
+  IMAGE: quay.io/opendatahub/opencode
+
+jobs:
+  # PR validation: amd64 only, no push
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Build (amd64 only)
+        run: podman build --platform linux/amd64 -f ./Containerfile -t opencode:validate .
+
+  # Production build: native runners per platform (no QEMU)
+  build:
+    if: github.event_name != 'pull_request'
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            slug: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            slug: arm64
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Log in to Quay.io
+        run: podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}"
+
+      - name: Build and push by digest
+        id: build
+        run: |
+          podman build --platform ${{ matrix.platform }} -f ./Containerfile \
+            -t "${{ env.IMAGE }}:${{ matrix.slug }}-${{ github.sha }}" .
+          podman push "${{ env.IMAGE }}:${{ matrix.slug }}-${{ github.sha }}" \
+            --digestfile /tmp/digest.txt
+          echo "digest=$(cat /tmp/digest.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload digest
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: digests-${{ matrix.slug }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Create multi-platform manifest and push tags
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Log in to Quay.io
+        run: podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}"
+
+      - name: Create and push manifest
+        run: |
+          DATE_TAG="$(date -u +%Y%m%d)"
+          SHA_TAG="${GITHUB_SHA::7}"
+
+          podman manifest create "${{ env.IMAGE }}:latest"
+          for digest_file in /tmp/digests/*; do
+            podman manifest add "${{ env.IMAGE }}:latest" \
+              "${{ env.IMAGE }}@sha256:$(basename "$digest_file")"
+          done
+
+          podman manifest push "${{ env.IMAGE }}:latest" --all
+          podman tag "${{ env.IMAGE }}:latest" "${{ env.IMAGE }}:${DATE_TAG}-${SHA_TAG}"
+          podman manifest push "${{ env.IMAGE }}:${DATE_TAG}-${SHA_TAG}" --all
+
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            podman tag "${{ env.IMAGE }}:latest" "${{ env.IMAGE }}:${{ github.ref_name }}"
+            podman manifest push "${{ env.IMAGE }}:${{ github.ref_name }}" --all
+          fi
