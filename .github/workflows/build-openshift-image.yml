@@ -52,7 +52,11 @@ jobs:
           persist-credentials: false
 
       - name: Log in to Quay.io
-        run: podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}"
+        uses: docker/login-action@v4
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
 
       - name: Build and push by digest
         id: build
@@ -92,7 +96,11 @@ jobs:
           merge-multiple: true
 
       - name: Log in to Quay.io
-        run: podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}"
+        uses: docker/login-action@v4
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
 
       - name: Create and push manifest
         env:
