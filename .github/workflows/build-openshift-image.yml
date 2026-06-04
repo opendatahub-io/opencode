@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE: quay.io/opendatahub/opencode
+  IMAGE: quay.io/opendatahub/odh-opencode-rhel9
 
 jobs:
   # PR validation: amd64 only, no push
