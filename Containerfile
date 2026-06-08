@@ -41,7 +41,7 @@ RUN set -eux; \
       aarch64) node_arch=arm64; node_sha256="${NODE_SHA256_ARM64}" ;; \
       *) echo "unsupported arch: $arch" && exit 1 ;; \
     esac; \
-    curl -fsSLo /tmp/node.tar.xz \
+    curl -fsSL --retry 5 --retry-delay 5 -o /tmp/node.tar.xz \
       "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz"; \
     echo "${node_sha256}  /tmp/node.tar.xz" | sha256sum -c -; \
     tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1; \
@@ -54,7 +54,7 @@ RUN set -eux; \
       aarch64) bun_arch=aarch64;   bun_sha256="${BUN_SHA256_ARM64}" ;; \
       *) echo "unsupported arch: $arch" && exit 1 ;; \
     esac; \
-    curl -fsSLo /tmp/bun.zip \
+    curl -fsSL --retry 5 --retry-delay 5 -o /tmp/bun.zip \
       "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-${bun_arch}.zip"; \
     echo "${bun_sha256}  /tmp/bun.zip" | sha256sum -c -; \
     unzip -qo /tmp/bun.zip -d /tmp; \
@@ -70,7 +70,7 @@ RUN set -eux; \
       aarch64) rg_arch=aarch64-unknown-linux-gnu;   rg_sha256="${RIPGREP_SHA256_ARM64}" ;; \
       *) echo "unsupported arch: $arch" && exit 1 ;; \
     esac; \
-    curl -fsSLo /tmp/rg.tar.gz \
+    curl -fsSL --retry 5 --retry-delay 5 -o /tmp/rg.tar.gz \
       "https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/ripgrep-${RIPGREP_VERSION}-${rg_arch}.tar.gz"; \
     echo "${rg_sha256}  /tmp/rg.tar.gz" | sha256sum -c -; \
     tar -xzf /tmp/rg.tar.gz -C /tmp; \
