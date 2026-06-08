@@ -16,19 +16,29 @@ env:
   IMAGE: quay.io/opendatahub/odh-opencode-rhel9
 
 jobs:
-  # PR validation: amd64 only, no push
+  # PR validation: both platforms, no push
   validate:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            slug: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            slug: arm64
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
-      - name: Build (amd64 only)
-        run: podman build --platform linux/amd64 -f ./Containerfile -t opencode:validate .
+      - name: Build (${{ matrix.slug }}, no push)
+        run: podman build --platform ${{ matrix.platform }} -f ./Containerfile -t opencode:validate .
 
   # Production build: native runners per platform (no QEMU)
   build:
@@ -47,7 +57,7 @@ jobs:
             runner: ubuntu-24.04-arm
             slug: arm64
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
