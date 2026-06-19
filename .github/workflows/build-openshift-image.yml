@@ -7,9 +7,6 @@ on:
       - Containerfile
       - .github/workflows/build-openshift-image.yml
   pull_request:
-    paths:
-      - Containerfile
-      - .github/workflows/build-openshift-image.yml
   workflow_dispatch:
 
 env:
