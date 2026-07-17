@@ -5,6 +5,7 @@ on:
     branches: [dev]
     paths:
       - Containerfile
+      - packages/opencode/package.json
       - .github/workflows/build-openshift-image.yml
   pull_request:
   workflow_dispatch:
