@@ -65,6 +65,10 @@ jobs:
         id: version
         run: |
           VERSION=$(jq -r .version packages/opencode/package.json)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version in package.json: ${VERSION}"
+            exit 1
+          fi
           echo "semver=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Quay.io
@@ -119,9 +123,10 @@ jobs:
           password: ${{ secrets.QUAY_PASSWORD }}
 
       - name: Create and push manifest
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           SHA_TAG="${GITHUB_SHA::7}"
-          VERSION="${{ needs.build.outputs.version }}"
 
           podman manifest create "$IMAGE:latest"
           for digest_file in /tmp/digests/*; do
