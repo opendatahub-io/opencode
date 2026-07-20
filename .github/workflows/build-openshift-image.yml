@@ -5,6 +5,7 @@ on:
     branches: [dev]
     paths:
       - Containerfile
+      - packages/opencode/package.json
       - .github/workflows/build-openshift-image.yml
   pull_request:
   workflow_dispatch:
@@ -43,6 +44,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
+    outputs:
+      version: ${{ steps.version.outputs.semver }}
     strategy:
       fail-fast: false
       matrix:
@@ -57,6 +60,16 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+
+      - name: Read package version
+        id: version
+        run: |
+          VERSION=$(jq -r .version packages/opencode/package.json)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version in package.json: ${VERSION}"
+            exit 1
+          fi
+          echo "semver=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Quay.io
         uses: docker/login-action@v4
@@ -111,10 +124,8 @@ jobs:
 
       - name: Create and push manifest
         env:
-          GIT_REF: ${{ github.ref }}
-          GIT_REF_NAME: ${{ github.ref_name }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          DATE_TAG="$(date -u +%Y%m%d)"
           SHA_TAG="${GITHUB_SHA::7}"
 
           podman manifest create "$IMAGE:latest"
@@ -124,10 +135,11 @@ jobs:
           done
 
           podman manifest push "$IMAGE:latest" --all
-          podman tag "$IMAGE:latest" "$IMAGE:${DATE_TAG}-${SHA_TAG}"
-          podman manifest push "$IMAGE:${DATE_TAG}-${SHA_TAG}" --all
 
-          if [[ "$GIT_REF" == refs/tags/v* ]]; then
-            podman tag "$IMAGE:latest" "$IMAGE:${GIT_REF_NAME}"
-            podman manifest push "$IMAGE:${GIT_REF_NAME}" --all
+          podman tag "$IMAGE:latest" "$IMAGE:${VERSION}-${SHA_TAG}"
+          podman manifest push "$IMAGE:${VERSION}-${SHA_TAG}" --all
+
+          if ! podman manifest inspect "docker://${IMAGE}:${VERSION}" > /dev/null 2>&1; then
+            podman tag "$IMAGE:latest" "$IMAGE:${VERSION}"
+            podman manifest push "$IMAGE:${VERSION}" --all
           fi
